@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import UIKit
+import AudioToolbox
 
 enum Phase: String {
     case hot = "Горячая"
@@ -29,6 +30,7 @@ class TimerModel: ObservableObject {
         isRunning = true
         isFinished = false
         speak("Горячая вода")
+        playTransitionSound()
         tick()
     }
 
@@ -36,6 +38,7 @@ class TimerModel: ObservableObject {
         timer?.invalidate()
         timer = nil
         isRunning = false
+        synth.stopSpeaking(at: .immediate)
     }
 
     private func tick() {
@@ -52,6 +55,8 @@ class TimerModel: ObservableObject {
 
     private func nextPhase() {
         vibrate()
+        playTransitionSound()
+
         if currentPhase == .hot {
             currentPhase = .cold
             secondsLeft = coldSeconds
@@ -75,6 +80,7 @@ class TimerModel: ObservableObject {
         isFinished = true
         currentPhase = .done
         speak("Готово. Молодец!")
+        playFinishSound()
         vibrate()
     }
 
@@ -83,6 +89,22 @@ class TimerModel: ObservableObject {
         utterance.voice = AVSpeechSynthesisVoice(language: "ru-RU")
         utterance.rate = 0.5
         synth.speak(utterance)
+    }
+
+    private func playTransitionSound() {
+        // Приятный "динь" — системный звук iOS
+        AudioServicesPlaySystemSound(1057)
+    }
+
+    private func playFinishSound() {
+        // Звук завершения — тройной "динь"
+        AudioServicesPlaySystemSound(1025)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            AudioServicesPlaySystemSound(1025)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            AudioServicesPlaySystemSound(1025)
+        }
     }
 
     private func vibrate() {

@@ -38,6 +38,23 @@ struct SettingsView: View {
                         }
                     }
                 }
+
+                Section {
+                    Link(destination: URL(string: "https://t.me/mixan2907")!) {
+                        HStack {
+                            Image(systemName: "paperplane.fill")
+                                .foregroundColor(.blue)
+                            Text("Написать разработчику")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+
+                Section {
+                    Text("ContrasDush v1.0")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             .navigationTitle("Настройки")
         }
