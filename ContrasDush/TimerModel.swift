@@ -8,14 +8,6 @@ enum Phase: String {
     case done = "Готово"
 }
 
-struct Preset: Identifiable, Codable {
-    let id = UUID()
-    let name: String
-    let hotSeconds: Int
-    let coldSeconds: Int
-    let cycles: Int
-}
-
 class TimerModel: ObservableObject {
     @Published var currentPhase: Phase = .hot
     @Published var secondsLeft: Int = 0
@@ -50,24 +42,16 @@ class TimerModel: ObservableObject {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-
             if self.secondsLeft > 0 {
                 self.secondsLeft -= 1
-
-                if self.secondsLeft == 3 {
-                    self.vibrate()
-                }
-
-                if self.secondsLeft == 0 {
-                    self.nextPhase()
-                }
+                if self.secondsLeft == 3 { self.vibrate() }
+                if self.secondsLeft == 0 { self.nextPhase() }
             }
         }
     }
 
     private func nextPhase() {
         vibrate()
-
         if currentPhase == .hot {
             currentPhase = .cold
             secondsLeft = coldSeconds

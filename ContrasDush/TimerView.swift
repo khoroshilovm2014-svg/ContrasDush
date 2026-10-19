@@ -5,24 +5,19 @@ struct TimerView: View {
 
     var body: some View {
         ZStack {
-            backgroundGradient
-                .ignoresSafeArea()
+            backgroundGradient.ignoresSafeArea()
 
             VStack(spacing: 30) {
                 Spacer()
-
-                // Фаза
                 Text(model.currentPhase.rawValue)
                     .font(.system(size: 42, weight: .bold))
                     .foregroundColor(.white)
 
-                // Секунды
                 Text("\(model.secondsLeft)")
                     .font(.system(size: 120, weight: .thin, design: .rounded))
                     .foregroundColor(.white)
                     .monospacedDigit()
 
-                // Цикл
                 if model.isRunning || model.secondsLeft > 0 {
                     Text("Цикл \(model.currentCycle) из \(model.totalCycles)")
                         .font(.title2)
@@ -31,26 +26,16 @@ struct TimerView: View {
 
                 Spacer()
 
-                // Кнопки
                 if !model.isRunning && !model.isFinished {
-                    Button("Начать") {
-                        model.start()
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-
+                    Button("Начать") { model.start() }
+                        .buttonStyle(PrimaryButtonStyle())
                 } else if model.isRunning {
-                    Button("Стоп") {
-                        model.stop()
-                    }
-                    .buttonStyle(SecondaryButtonStyle())
-
+                    Button("Стоп") { model.stop() }
+                        .buttonStyle(SecondaryButtonStyle())
                 } else if model.isFinished {
-                    Button("Ещё раз") {
-                        model.start()
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
+                    Button("Ещё раз") { model.start() }
+                        .buttonStyle(PrimaryButtonStyle())
                 }
-
                 Spacer()
             }
             .padding()
@@ -59,20 +44,11 @@ struct TimerView: View {
 
     var backgroundGradient: LinearGradient {
         if model.currentPhase == .hot {
-            return LinearGradient(
-                colors: [.red.opacity(0.8), .orange.opacity(0.6)],
-                startPoint: .top, endPoint: .bottom
-            )
+            return LinearGradient(colors: [.red.opacity(0.8), .orange.opacity(0.6)], startPoint: .top, endPoint: .bottom)
         } else if model.currentPhase == .cold {
-            return LinearGradient(
-                colors: [.blue.opacity(0.8), .cyan.opacity(0.6)],
-                startPoint: .top, endPoint: .bottom
-            )
+            return LinearGradient(colors: [.blue.opacity(0.8), .cyan.opacity(0.6)], startPoint: .top, endPoint: .bottom)
         } else {
-            return LinearGradient(
-                colors: [.green.opacity(0.8), .teal.opacity(0.6)],
-                startPoint: .top, endPoint: .bottom
-            )
+            return LinearGradient(colors: [.green.opacity(0.8), .teal.opacity(0.6)], startPoint: .top, endPoint: .bottom)
         }
     }
 }
