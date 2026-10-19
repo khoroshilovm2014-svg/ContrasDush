@@ -6,6 +6,7 @@ import AudioToolbox
 enum Phase: String {
     case hot = "Горячая"
     case cold = "Холодная"
+    case transition = "Переход"
     case done = "Готово"
 }
 
@@ -17,11 +18,12 @@ class TimerModel: ObservableObject {
     @Published var isRunning: Bool = false
     @Published var isFinished: Bool = false
 
+    // Настройки
     var hotSeconds: Int = 30
     var coldSeconds: Int = 30
+    let transitionSeconds: Int = 3 // 3 секунды на смену
 
     private var timer: Timer?
-    private var synth = AVSpeechSynthesizer()
 
     func start() {
         currentPhase = .hot
@@ -29,7 +31,6 @@ class TimerModel: ObservableObject {
         currentCycle = 1
         isRunning = true
         isFinished = false
-        speak("Горячая вода")
         playTransitionSound()
         tick()
     }
@@ -38,38 +39,71 @@ class TimerModel: ObservableObject {
         timer?.invalidate()
         timer = nil
         isRunning = false
-        synth.stopSpeaking(at: .immediate)
     }
 
     private func tick() {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
+            
             if self.secondsLeft > 0 {
                 self.secondsLeft -= 1
-                if self.secondsLeft == 3 { self.vibrate() }
-                if self.secondsLeft == 0 { self.nextPhase() }
+                
+                // Пикаем, если осталось 3, 2 или 1 секунда (и это не переход)
+                if self.secondsLeft <= 3 && self.secondsLeft > 0 && self.currentPhase != .transition {
+                    self.playBeep()
+                }
+                
+                // Время фазы истекло
+                if self.secondsLeft == 0 {
+                    if self.currentPhase == .hot {
+                        self.startTransition(toPhase: .cold)
+                    } else if self.currentPhase == .cold {
+                        if self.currentCycle >= self.totalCycles {
+                            self.finish()
+                        } else {
+                            self.startTransition(toPhase: .hot)
+                        }
+                    } else if self.currentPhase == .transition {
+                        // Переход закончился, включаем следующую фазу
+                        if self.currentCycle >= self.totalCycles {
+                            self.finish()
+                        } else {
+                            if self.currentPhase == .transition {
+                                // Определяем, куда идем
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
-    private func nextPhase() {
+    private func startTransition(toPhase: Phase) {
         vibrate()
         playTransitionSound()
-
-        if currentPhase == .hot {
-            currentPhase = .cold
-            secondsLeft = coldSeconds
-            speak("Холодная вода")
-        } else {
-            if currentCycle >= totalCycles {
-                finish()
-            } else {
-                currentCycle += 1
-                currentPhase = .hot
-                secondsLeft = hotSeconds
-                speak("Цикл \(currentCycle). Горячая вода")
+        
+        currentPhase = .transition
+        secondsLeft = transitionSeconds
+        
+        // Запоминаем, куда перейдем после перехода
+        let nextPhase = toPhase
+        
+        // Через 3 секунды переключим на нужную фазу
+        DispatchQueue.main.asyncAfter(deadline: .now() + Double(transitionSeconds)) {
+            guard self.isRunning else { return }
+            
+            if nextPhase == .cold {
+                self.currentPhase = .cold
+                self.secondsLeft = self.coldSeconds
+            } else if nextPhase == .hot {
+                self.currentCycle += 1
+                self.currentPhase = .hot
+                self.secondsLeft = self.hotSeconds
             }
+            
+            // Запускаем следующий тик
+            self.tick()
         }
     }
 
@@ -79,36 +113,30 @@ class TimerModel: ObservableObject {
         isRunning = false
         isFinished = true
         currentPhase = .done
-        speak("Готово. Молодец!")
         playFinishSound()
         vibrate()
     }
 
-    private func speak(_ text: String) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "ru-RU")
-        utterance.rate = 0.5
-        synth.speak(utterance)
+    private func playBeep() {
+        // Короткий писк
+        AudioServicesPlaySystemSound(1104) 
     }
 
     private func playTransitionSound() {
-        // Приятный "динь" — системный звук iOS
+        // Приятный динь при смене
         AudioServicesPlaySystemSound(1057)
     }
 
     private func playFinishSound() {
-        // Звук завершения — тройной "динь"
+        // Звук завершения
         AudioServicesPlaySystemSound(1025)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            AudioServicesPlaySystemSound(1025)
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             AudioServicesPlaySystemSound(1025)
         }
     }
 
     private func vibrate() {
         let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.warning)
+        generator.notificationOccurred(.success)
     }
 }
