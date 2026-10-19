@@ -1,35 +1,35 @@
 workflows:
   ios-workflow:
-    name: ContrasDush iOS Build
+    name: ContrasDush iOS Build (unsigned)
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
-      ios_signing:
-        distribution_type: development
-        bundle_identifier: com.khoroshilovm.contrasdush
       vars:
-        XCODE_WORKSPACE: "ContrasDush.xcworkspace"
+        XCODE_PROJECT: "ContrasDush.xcodeproj"
         XCODE_SCHEME: "ContrasDush"
     scripts:
-      - name: Install dependencies
+      - name: Build app (unsigned)
         script: |
-          echo "No dependencies to install"
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_ENTITLEMENTS="" \
+            build
       
-      - name: Set up code signing
+      - name: Package to IPA
         script: |
-          keychain initialize
-          app-store-connect fetch-signing-files "com.khoroshilovm.contrasdush" --type IOS_APP_DEVELOPMENT --create
-          keychain add-certificates
-          xcode-project use-profiles
-      
-      - name: Build IPA
-        script: |
-          xcode-project build-ipa \
-            --project "ContrasDush.xcodeproj" \
-            --scheme "ContrasDush"
+          mkdir -p artifacts/Payload
+          cp -R build/Build/Products/Release-iphoneos/ContrasDush.app artifacts/Payload/
+          cd artifacts
+          zip -r ContrasDush-unsigned.ipa Payload
     artifacts:
-      - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
+      - artifacts/ContrasDush-unsigned.ipa
     publishing:
       email:
         recipients:
