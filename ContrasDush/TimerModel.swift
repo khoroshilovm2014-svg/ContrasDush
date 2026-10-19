@@ -1,7 +1,6 @@
 import Foundation
 import AVFoundation
 import UIKit
-import AudioToolbox
 
 enum Phase: String {
     case hot = "Горячая"
@@ -18,12 +17,43 @@ class TimerModel: ObservableObject {
     @Published var isRunning: Bool = false
     @Published var isFinished: Bool = false
 
-    // Настройки
     var hotSeconds: Int = 30
     var coldSeconds: Int = 30
-    let transitionSeconds: Int = 3 // 3 секунды на смену
+    let transitionSeconds: Int = 3
 
     private var timer: Timer?
+    private var musicPlayer: AVAudioPlayer?
+    private var beepPlayer: AVAudioPlayer?
+    private var transitionPlayer: AVAudioPlayer?
+
+    init() {
+        setupAudio()
+    }
+
+    private func setupAudio() {
+        // Фоновая музыка
+        if let url = Bundle.main.url(forResource: "background", withExtension: "mp3") {
+            do {
+                musicPlayer = try AVAudioPlayer(contentsOf: url)
+                musicPlayer?.numberOfLoops = -1 // Бесконечный цикл
+                musicPlayer?.volume = 0.3 // Негромко
+                musicPlayer?.prepareToPlay()
+            } catch {
+                print("Ошибка музыки: \(error)")
+            }
+        }
+
+        // Звук пиканья
+        if let url = Bundle.main.url(forResource: "beep", withExtension: "mp3") {
+            do {
+                beepPlayer = try AVAudioPlayer(contentsOf: url)
+                beepPlayer?.volume = 1.0 // Громко
+                beepPlayer?.prepareToPlay()
+            } catch {
+                print("Ошибка пиканья: \(error)")
+            }
+        }
+    }
 
     func start() {
         currentPhase = .hot
@@ -31,7 +61,8 @@ class TimerModel: ObservableObject {
         currentCycle = 1
         isRunning = true
         isFinished = false
-        playTransitionSound()
+        musicPlayer?.currentTime = 0
+        musicPlayer?.play()
         tick()
     }
 
@@ -39,22 +70,21 @@ class TimerModel: ObservableObject {
         timer?.invalidate()
         timer = nil
         isRunning = false
+        musicPlayer?.stop()
     }
 
     private func tick() {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            
             if self.secondsLeft > 0 {
                 self.secondsLeft -= 1
                 
-                // Пикаем, если осталось 3, 2 или 1 секунда (и это не переход)
+                // Пикаем на 3, 2, 1
                 if self.secondsLeft <= 3 && self.secondsLeft > 0 && self.currentPhase != .transition {
                     self.playBeep()
                 }
                 
-                // Время фазы истекло
                 if self.secondsLeft == 0 {
                     if self.currentPhase == .hot {
                         self.startTransition(toPhase: .cold)
@@ -64,15 +94,6 @@ class TimerModel: ObservableObject {
                         } else {
                             self.startTransition(toPhase: .hot)
                         }
-                    } else if self.currentPhase == .transition {
-                        // Переход закончился, включаем следующую фазу
-                        if self.currentCycle >= self.totalCycles {
-                            self.finish()
-                        } else {
-                            if self.currentPhase == .transition {
-                                // Определяем, куда идем
-                            }
-                        }
                     }
                 }
             }
@@ -81,28 +102,22 @@ class TimerModel: ObservableObject {
 
     private func startTransition(toPhase: Phase) {
         vibrate()
-        playTransitionSound()
-        
         currentPhase = .transition
         secondsLeft = transitionSeconds
-        
-        // Запоминаем, куда перейдем после перехода
-        let nextPhase = toPhase
         
         // Через 3 секунды переключим на нужную фазу
         DispatchQueue.main.asyncAfter(deadline: .now() + Double(transitionSeconds)) {
             guard self.isRunning else { return }
             
-            if nextPhase == .cold {
+            if toPhase == .cold {
                 self.currentPhase = .cold
                 self.secondsLeft = self.coldSeconds
-            } else if nextPhase == .hot {
+            } else if toPhase == .hot {
                 self.currentCycle += 1
                 self.currentPhase = .hot
                 self.secondsLeft = self.hotSeconds
             }
             
-            // Запускаем следующий тик
             self.tick()
         }
     }
@@ -113,26 +128,13 @@ class TimerModel: ObservableObject {
         isRunning = false
         isFinished = true
         currentPhase = .done
-        playFinishSound()
+        musicPlayer?.stop()
         vibrate()
     }
 
     private func playBeep() {
-        // Короткий писк
-        AudioServicesPlaySystemSound(1104) 
-    }
-
-    private func playTransitionSound() {
-        // Приятный динь при смене
-        AudioServicesPlaySystemSound(1057)
-    }
-
-    private func playFinishSound() {
-        // Звук завершения
-        AudioServicesPlaySystemSound(1025)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            AudioServicesPlaySystemSound(1025)
-        }
+        beepPlayer?.currentTime = 0
+        beepPlayer?.play()
     }
 
     private func vibrate() {

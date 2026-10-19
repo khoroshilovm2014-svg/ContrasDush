@@ -17,16 +17,24 @@ struct TimerView: View {
                     .font(.system(size: 44, weight: .bold))
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 2)
+                    .animation(.easeInOut, value: model.currentPhase)
 
-                // Секунды
-                Text("\(model.secondsLeft)")
-                    .font(.system(size: 140, weight: .ultraLight, design: .rounded))
-                    .foregroundColor(.white)
-                    .monospacedDigit()
-                    .scaleEffect(model.secondsLeft <= 3 && model.secondsLeft > 0 && model.isRunning ? 1.1 : 1.0)
-                    .animation(.easeInOut(duration: 0.2), value: model.secondsLeft)
+                // Секунды (с анимацией)
+                ZStack {
+                    Text("\(model.secondsLeft)")
+                        .font(.system(size: 140, weight: .ultraLight, design: .rounded))
+                        .foregroundColor(.white)
+                        .monospacedDigit()
+                        .id(model.secondsLeft) // ← Триггер для анимации
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal: .move(edge: .bottom).combined(with: .opacity)
+                        ))
+                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: model.secondsLeft)
+                }
+                .frame(height: 160)
 
-                // Цикл (показываем только если это не переход)
+                // Цикл
                 if model.currentPhase != .done {
                     Text("Цикл \(model.currentCycle) из \(model.totalCycles)")
                         .font(.title3)
@@ -35,7 +43,7 @@ struct TimerView: View {
 
                 Spacer()
 
-                // Кнопка управления
+                // Кнопки
                 if !model.isRunning && !model.isFinished {
                     Button(action: { model.start() }) {
                         Text("Начать")
