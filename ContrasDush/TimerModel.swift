@@ -24,30 +24,28 @@ class TimerModel: ObservableObject {
     private var timer: Timer?
     private var musicPlayer: AVAudioPlayer?
     private var beepPlayer: AVAudioPlayer?
-    private var transitionPlayer: AVAudioPlayer?
 
     init() {
         setupAudio()
+        loadSettings()  // ← читаем настройки при создании
+    }
+
+    // ← ГЛАВНОЕ: перечитываем настройки при каждом старте
+    private func loadSettings() {
+        let hot = UserDefaults.standard.integer(forKey: "hot")
+        let cold = UserDefaults.standard.integer(forKey: "cold")
+        let cycles = UserDefaults.standard.integer(forKey: "cycles")
+
+        hotSeconds = hot > 0 ? hot : 30
+        coldSeconds = cold > 0 ? cold : 30
+        totalCycles = cycles > 0 ? cycles : 3
     }
 
     private func setupAudio() {
-        // Фоновая музыка
-        if let url = Bundle.main.url(forResource: "background", withExtension: "mp3") {
-            do {
-                musicPlayer = try AVAudioPlayer(contentsOf: url)
-                musicPlayer?.numberOfLoops = -1 // Бесконечный цикл
-                musicPlayer?.volume = 0.3 // Негромко
-                musicPlayer?.prepareToPlay()
-            } catch {
-                print("Ошибка музыки: \(error)")
-            }
-        }
-
-        // Звук пиканья
         if let url = Bundle.main.url(forResource: "beep", withExtension: "mp3") {
             do {
                 beepPlayer = try AVAudioPlayer(contentsOf: url)
-                beepPlayer?.volume = 1.0 // Громко
+                beepPlayer?.volume = 1.0
                 beepPlayer?.prepareToPlay()
             } catch {
                 print("Ошибка пиканья: \(error)")
@@ -55,7 +53,48 @@ class TimerModel: ObservableObject {
         }
     }
 
+    private func loadMusic() {
+        musicPlayer?.stop()
+        musicPlayer = nil
+
+        let choice = UserDefaults.standard.string(forKey: "musicChoice") ?? "videoclub"
+
+        if choice == "none" {
+            return
+        }
+
+        if choice == "custom" {
+            let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let url = documents.appendingPathComponent("custom_music.mp3")
+            if FileManager.default.fileExists(atPath: url.path) {
+                do {
+                    musicPlayer = try AVAudioPlayer(contentsOf: url)
+                    musicPlayer?.numberOfLoops = -1
+                    musicPlayer?.volume = 0.3
+                    musicPlayer?.prepareToPlay()
+                } catch {
+                    print("Ошибка custom музыки: \(error)")
+                }
+            }
+        } else {
+            if let url = Bundle.main.url(forResource: "background", withExtension: "mp3") {
+                do {
+                    musicPlayer = try AVAudioPlayer(contentsOf: url)
+                    musicPlayer?.numberOfLoops = -1
+                    musicPlayer?.volume = 0.3
+                    musicPlayer?.prepareToPlay()
+                } catch {
+                    print("Ошибка музыки: \(error)")
+                }
+            }
+        }
+    }
+
+    // ← ГЛАВНОЕ: перечитываем настройки и музыку ПРИ КАЖДОМ старте
     func start() {
+        loadSettings()  // ← обновляем горячую/холодную/повторы
+        loadMusic()     // ← обновляем музыку
+
         currentPhase = .hot
         secondsLeft = hotSeconds
         currentCycle = 1
@@ -79,12 +118,11 @@ class TimerModel: ObservableObject {
             guard let self = self else { return }
             if self.secondsLeft > 0 {
                 self.secondsLeft -= 1
-                
-                // Пикаем на 3, 2, 1
+
                 if self.secondsLeft <= 3 && self.secondsLeft > 0 && self.currentPhase != .transition {
                     self.playBeep()
                 }
-                
+
                 if self.secondsLeft == 0 {
                     if self.currentPhase == .hot {
                         self.startTransition(toPhase: .cold)
@@ -104,11 +142,10 @@ class TimerModel: ObservableObject {
         vibrate()
         currentPhase = .transition
         secondsLeft = transitionSeconds
-        
-        // Через 3 секунды переключим на нужную фазу
+
         DispatchQueue.main.asyncAfter(deadline: .now() + Double(transitionSeconds)) {
             guard self.isRunning else { return }
-            
+
             if toPhase == .cold {
                 self.currentPhase = .cold
                 self.secondsLeft = self.coldSeconds
@@ -117,7 +154,7 @@ class TimerModel: ObservableObject {
                 self.currentPhase = .hot
                 self.secondsLeft = self.hotSeconds
             }
-            
+
             self.tick()
         }
     }
