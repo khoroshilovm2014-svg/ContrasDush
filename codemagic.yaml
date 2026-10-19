@@ -3,23 +3,26 @@ workflows:
     name: ContrasDush iOS Build (unsigned)
     max_build_duration: 60
     instance_type: mac_mini_m2
-    environment:
-      vars:
-        XCODE_PROJECT: "ContrasDush.xcodeproj"
-        XCODE_SCHEME: "ContrasDush"
     scripts:
+      - name: Install xcodegen
+        script: |
+          brew install xcodegen
+      
+      - name: Generate Xcode project
+        script: |
+          xcodegen generate
+      
       - name: Build app (unsigned)
         script: |
           xcodebuild \
-            -project "$XCODE_PROJECT" \
-            -scheme "$XCODE_SCHEME" \
+            -project ContrasDush.xcodeproj \
+            -scheme ContrasDush \
             -sdk iphoneos \
             -configuration Release \
             -derivedDataPath build \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_ENTITLEMENTS="" \
             build
       
       - name: Package to IPA
@@ -30,10 +33,3 @@ workflows:
           zip -r ContrasDush-unsigned.ipa Payload
     artifacts:
       - artifacts/ContrasDush-unsigned.ipa
-    publishing:
-      email:
-        recipients:
-          - khoroshilovm2014@gmail.com
-        notify:
-          success: true
-          failure: true

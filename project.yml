@@ -1,0 +1,25 @@
+name: ContrasDush
+options:
+  bundleIdPrefix: com.khoroshilovm
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGNING_ALLOWED: "NO"
+targets:
+  ContrasDush:
+    type: application
+    platform: iOS
+    sources:
+      - ContrasDush
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.khoroshilovm.contrasdush
+        INFOPLIST_FILE: ""
+        GENERATE_INFOPLIST_FILE: "YES"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
