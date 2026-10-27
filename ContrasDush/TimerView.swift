@@ -2,96 +2,87 @@ import SwiftUI
 
 struct TimerView: View {
     @StateObject private var model = TimerModel()
+    @EnvironmentObject var settings: AppSettings
 
     var body: some View {
         ZStack {
-            backgroundGradient
-                .ignoresSafeArea()
-                .animation(.easeInOut(duration: 0.5), value: model.currentPhase)
+            backgroundGradient.ignoresSafeArea()
 
-            VStack(spacing: 20) {
+            VStack(spacing: 30) {
                 Spacer()
-                
-                // Фаза
+
                 Text(model.currentPhase.rawValue)
-                    .font(.system(size: 44, weight: .bold))
+                    .font(.system(size: 42, weight: .bold))
                     .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 2)
-                    .animation(.easeInOut, value: model.currentPhase)
 
-                // Секунды (с анимацией)
-                ZStack {
-                    Text("\(model.secondsLeft)")
-                        .font(.system(size: 140, weight: .ultraLight, design: .rounded))
-                        .foregroundColor(.white)
-                        .monospacedDigit()
-                        .id(model.secondsLeft) // ← Триггер для анимации
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .top).combined(with: .opacity),
-                            removal: .move(edge: .bottom).combined(with: .opacity)
-                        ))
-                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: model.secondsLeft)
-                }
-                .frame(height: 160)
+                Text("\(model.secondsLeft)")
+                    .font(.system(size: 120, weight: .thin, design: .rounded))
+                    .foregroundColor(.white)
+                    .monospacedDigit()
 
-                // Цикл
-                if model.currentPhase != .done {
-                    Text("Цикл \(model.currentCycle) из \(model.totalCycles)")
-                        .font(.title3)
-                        .foregroundColor(.white.opacity(0.7))
+                if model.isRunning || model.secondsLeft > 0 {
+                    Text("Цикл \(model.currentCycleIndex + 1) из \(settings.cycles.count)")
+                        .font(.title2)
+                        .foregroundColor(.white.opacity(0.8))
                 }
 
                 Spacer()
 
-                // Кнопки
                 if !model.isRunning && !model.isFinished {
-                    Button(action: { model.start() }) {
-                        Text("Начать")
-                            .font(.title2.bold())
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 20)
-                            .background(Color.white.opacity(0.2))
-                            .cornerRadius(20)
+                    Button("Начать") {
+                        model.start(with: settings.cycles)
                     }
+                    .buttonStyle(PrimaryButtonStyle())
                 } else if model.isRunning {
-                    Button(action: { model.stop() }) {
-                        Text("Стоп")
-                            .font(.title2.bold())
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 20)
-                            .background(Color.black.opacity(0.3))
-                            .cornerRadius(20)
+                    Button("Стоп") {
+                        model.stop()
                     }
+                    .buttonStyle(SecondaryButtonStyle())
                 } else if model.isFinished {
-                    Button(action: { model.start() }) {
-                        Text("Ещё раз")
-                            .font(.title2.bold())
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 20)
-                            .background(Color.green.opacity(0.5))
-                            .cornerRadius(20)
+                    Button("Ещё раз") {
+                        model.start(with: settings.cycles)
                     }
+                    .buttonStyle(PrimaryButtonStyle())
                 }
-                
-                Spacer().frame(height: 30)
+
+                Spacer()
             }
             .padding()
         }
     }
 
     var backgroundGradient: LinearGradient {
-        switch model.currentPhase {
-        case .hot:
-            return LinearGradient(colors: [.red.opacity(0.9), .orange.opacity(0.7)], startPoint: .top, endPoint: .bottom)
-        case .cold:
-            return LinearGradient(colors: [.blue.opacity(0.9), .cyan.opacity(0.7)], startPoint: .top, endPoint: .bottom)
-        case .transition:
-            return LinearGradient(colors: [.purple.opacity(0.8), .indigo.opacity(0.6)], startPoint: .top, endPoint: .bottom)
-        case .done:
-            return LinearGradient(colors: [.green.opacity(0.9), .teal.opacity(0.7)], startPoint: .top, endPoint: .bottom)
+        if model.currentPhase == .hot {
+            return LinearGradient(colors: [.red.opacity(0.8), .orange.opacity(0.6)], startPoint: .top, endPoint: .bottom)
+        } else if model.currentPhase == .cold {
+            return LinearGradient(colors: [.blue.opacity(0.8), .cyan.opacity(0.6)], startPoint: .top, endPoint: .bottom)
+        } else {
+            return LinearGradient(colors: [.green.opacity(0.8), .teal.opacity(0.6)], startPoint: .top, endPoint: .bottom)
         }
+    }
+}
+
+struct PrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.title2.bold())
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+            .background(Color.white.opacity(0.2))
+            .cornerRadius(20)
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+    }
+}
+
+struct SecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.title2.bold())
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+            .background(Color.black.opacity(0.3))
+            .cornerRadius(20)
     }
 }
