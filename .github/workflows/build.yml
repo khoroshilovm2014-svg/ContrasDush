@@ -1,0 +1,38 @@
+name: Build Unsigned IPA
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_15.2.app
+
+      - name: Build App (Unsigned)
+        run: |
+          xcodebuild -project ContrasDush.xcodeproj -scheme ContrasDush -sdk iphoneos -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+
+      - name: Create Payload folder
+        run: |
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/Release-iphoneos/ContrasDush.app build/ios/ipa/Payload/
+
+      - name: Package to IPA
+        run: |
+          cd build/ios/ipa
+          zip -r ContrasDush.ipa Payload/
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ContrasDush-Unsigned-IPA
+          path: build/ios/ipa/ContrasDush.ipa
