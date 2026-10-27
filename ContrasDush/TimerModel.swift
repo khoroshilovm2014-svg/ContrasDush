@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import UIKit
+import AudioToolbox
 
 enum Phase: String {
     case hot = "Горячая"
@@ -16,23 +17,18 @@ class TimerModel: ObservableObject {
     @Published var isRunning: Bool = false
     @Published var isFinished: Bool = false
 
-    var hotSeconds: Int = 30
-    var coldSeconds: Int = 30
-    
-    // НОВОЕ: Массив циклов и плеер
-    var customCycles: [CustomCycle] = []
+    var cycles: [CustomCycle] = []
     private var currentCycleIndex: Int = 0
     private var phaseInCycle: Int = 0
     private var audioPlayer: AVAudioPlayer?
 
     private var timer: Timer?
-    private var synth = AVSpeechSynthesizer()
 
-    // Обновленный старт (принимает циклы и музыку)
     func start(cycles: [CustomCycle], musicURL: URL?) {
-        self.customCycles = cycles
-        self.currentCycleIndex = 0
-        self.phaseInCycle = 0
+        guard !cycles.isEmpty else { return }
+        self.cycles = cycles
+        currentCycleIndex = 0
+        phaseInCycle = 0
         
         currentPhase = .hot
         secondsLeft = cycles[0].hotSeconds
@@ -41,7 +37,6 @@ class TimerModel: ObservableObject {
         isRunning = true
         isFinished = false
         
-        // Музыка
         if let url = musicURL {
             do {
                 audioPlayer = try AVAudioPlayer(contentsOf: url)
@@ -50,7 +45,7 @@ class TimerModel: ObservableObject {
             } catch { print("Ошибка музыки: \(error)") }
         }
         
-        speak("Цикл 1. Горячая вода")
+        playBeep() // Тот самый звук при старте
         tick()
     }
 
@@ -76,23 +71,23 @@ class TimerModel: ObservableObject {
 
     private func nextPhase() {
         vibrate()
-        let current = customCycles[currentCycleIndex]
+        playBeep() // Тот самый звук при смене воды
+        
+        let current = cycles[currentCycleIndex]
 
         if phaseInCycle == 0 {
             currentPhase = .cold
             secondsLeft = current.coldSeconds
             phaseInCycle = 1
-            speak("Холодная вода")
         } else {
             currentCycleIndex += 1
-            if currentCycleIndex >= customCycles.count {
+            if currentCycleIndex >= cycles.count {
                 finish()
             } else {
                 phaseInCycle = 0
                 currentPhase = .hot
-                secondsLeft = customCycles[currentCycleIndex].hotSeconds
+                secondsLeft = cycles[currentCycleIndex].hotSeconds
                 currentCycle = currentCycleIndex + 1
-                speak("Цикл \(currentCycle). Горячая вода")
             }
         }
     }
@@ -104,15 +99,13 @@ class TimerModel: ObservableObject {
         isFinished = true
         currentPhase = .done
         audioPlayer?.stop()
-        speak("Готово. Молодец!")
+        playBeep() // Тот самый звук в конце
         vibrate()
     }
 
-    private func speak(_ text: String) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "ru-RU")
-        utterance.rate = 0.5
-        synth.speak(utterance)
+    // ТОТ САМЫЙ ЗВУК 1057
+    private func playBeep() {
+        AudioServicesPlaySystemSound(1057)
     }
 
     private func vibrate() {

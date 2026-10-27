@@ -43,7 +43,7 @@ struct SettingsView: View {
                     Button(action: { showFileImporter = true }) {
                         HStack {
                             Image(systemName: "music.note")
-                            Text(settings.musicFileName != nil ? "Музыка загружена (нажми чтобы сменить)" : "Выбрать музыку из файлов")
+                            Text(settings.musicFileName != nil ? "Музыка загружена" : "Выбрать музыку из файлов")
                         }
                     }
                     if settings.musicFileName != nil {
@@ -56,14 +56,14 @@ struct SettingsView: View {
                 Section(header: Text("Готовые схемы")) {
                     ForEach(Presets.all) { preset in
                         Button(preset.name) {
-                            // Применяем готовую схему (создаем нужное кол-во циклов)
                             settings.cycles = Array(repeating: CustomCycle(hotSeconds: preset.hotSeconds, coldSeconds: preset.coldSeconds), count: preset.cycles)
                         }
                     }
                 }
             }
             .navigationTitle("Настройки")
-            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.audio]) { result in
+            // Разрешаем вообще все файлы (чтобы 100% можно было выбрать mp3)
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item]) { result in
                 switch result {
                 case .success(let url):
                     let access = url.startAccessingSecurityScopedResource()
