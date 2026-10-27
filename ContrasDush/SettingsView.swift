@@ -1,51 +1,78 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @EnvironmentObject var settings: AppSettings
+    @State private var showFileImporter = false
 
     var body: some View {
         NavigationView {
-            List {
-                Section(header: Text("Настройка циклов")) {
+            Form {
+                Section(header: Text("Своя схема циклов")) {
                     ForEach(Array(settings.cycles.enumerated()), id: \.element.id) { index, cycle in
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Цикл \(index + 1)").font(.headline)
-                            
                             HStack {
-                                Text("🔥 Горячая: \(cycle.hotSeconds) сек")
+                                Text("🔥 Горячая: \(cycle.hotSeconds) с").frame(width: 120, alignment: .leading)
                                 Slider(value: Binding(
                                     get: { Double(cycle.hotSeconds) },
-                                    set: { newValue in
-                                        settings.cycles[index].hotSeconds = Int(newValue)
-                                    }
+                                    set: { settings.cycles[index].hotSeconds = Int($0) }
                                 ), in: 5...180, step: 5)
                             }
-                            
                             HStack {
-                                Text("❄️ Холодная: \(cycle.coldSeconds) сек")
+                                Text("❄️ Холодная: \(cycle.coldSeconds) с").frame(width: 120, alignment: .leading)
                                 Slider(value: Binding(
                                     get: { Double(cycle.coldSeconds) },
-                                    set: { newValue in
-                                        settings.cycles[index].coldSeconds = Int(newValue)
-                                    }
+                                    set: { settings.cycles[index].coldSeconds = Int($0) }
                                 ), in: 5...180, step: 5)
                             }
                         }
                         .padding(.vertical, 5)
                     }
-                    .onDelete { indexSet in
-                        settings.cycles.remove(atOffsets: indexSet)
-                    }
+                    .onDelete { settings.cycles.remove(atOffsets: $0) }
                     
                     Button(action: {
-                        let lastCycle = settings.cycles.last ?? CycleConfig(hotSeconds: 30, coldSeconds: 30)
-                        settings.cycles.append(CycleConfig(hotSeconds: lastCycle.hotSeconds, coldSeconds: lastCycle.coldSeconds))
+                        let last = settings.cycles.last ?? CustomCycle(hotSeconds: 30, coldSeconds: 30)
+                        settings.cycles.append(CustomCycle(hotSeconds: last.hotSeconds, coldSeconds: last.coldSeconds))
                     }) {
                         Label("Добавить цикл", systemImage: "plus.circle.fill")
                     }
                 }
+                
+                Section(header: Text("Фоновая музыка")) {
+                    Button(action: { showFileImporter = true }) {
+                        HStack {
+                            Image(systemName: "music.note")
+                            Text(settings.musicFileName != nil ? "Музыка загружена (нажми чтобы сменить)" : "Выбрать музыку из файлов")
+                        }
+                    }
+                    if settings.musicFileName != nil {
+                        Button(action: { settings.musicFileName = nil }) {
+                            Text("Удалить музыку").foregroundColor(.red)
+                        }
+                    }
+                }
+
+                Section(header: Text("Готовые схемы")) {
+                    ForEach(Presets.all) { preset in
+                        Button(preset.name) {
+                            // Применяем готовую схему (создаем нужное кол-во циклов)
+                            settings.cycles = Array(repeating: CustomCycle(hotSeconds: preset.hotSeconds, coldSeconds: preset.coldSeconds), count: preset.cycles)
+                        }
+                    }
+                }
             }
             .navigationTitle("Настройки")
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.audio]) { result in
+                switch result {
+                case .success(let url):
+                    let access = url.startAccessingSecurityScopedResource()
+                    defer { if access { url.stopAccessingSecurityScopedResource() } }
+                    settings.saveMusic(from: url)
+                case .failure(let error):
+                    print("Ошибка файла: \(error.localizedDescription)")
+                }
+            }
         }
     }
 }

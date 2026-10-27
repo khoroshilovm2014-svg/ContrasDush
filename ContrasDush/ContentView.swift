@@ -14,7 +14,7 @@ struct ContentView: View {
             SettingsView()
                 .environmentObject(settings)
                 .tabItem {
-                    Label("Настройки", systemImage: "slider.horizontal.3")
+                    Label("Настройки", systemImage: "gear")
                 }
         }
     }

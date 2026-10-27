@@ -21,7 +21,7 @@ struct TimerView: View {
                     .monospacedDigit()
 
                 if model.isRunning || model.secondsLeft > 0 {
-                    Text("Цикл \(model.currentCycleIndex + 1) из \(settings.cycles.count)")
+                    Text("Цикл \(model.currentCycle) из \(model.totalCycles)")
                         .font(.title2)
                         .foregroundColor(.white.opacity(0.8))
                 }
@@ -30,17 +30,20 @@ struct TimerView: View {
 
                 if !model.isRunning && !model.isFinished {
                     Button("Начать") {
-                        model.start(with: settings.cycles)
+                        // Передаем кастомные циклы и музыку
+                        model.start(cycles: settings.cycles, musicURL: settings.musicURL)
                     }
                     .buttonStyle(PrimaryButtonStyle())
+
                 } else if model.isRunning {
                     Button("Стоп") {
                         model.stop()
                     }
                     .buttonStyle(SecondaryButtonStyle())
+
                 } else if model.isFinished {
                     Button("Ещё раз") {
-                        model.start(with: settings.cycles)
+                        model.start(cycles: settings.cycles, musicURL: settings.musicURL)
                     }
                     .buttonStyle(PrimaryButtonStyle())
                 }
@@ -64,25 +67,11 @@ struct TimerView: View {
 
 struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.title2.bold())
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 20)
-            .background(Color.white.opacity(0.2))
-            .cornerRadius(20)
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+        configuration.label.font(.title2.bold()).foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 20).background(Color.white.opacity(0.2)).cornerRadius(20).scaleEffect(configuration.isPressed ? 0.95 : 1.0)
     }
 }
-
 struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.title2.bold())
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 20)
-            .background(Color.black.opacity(0.3))
-            .cornerRadius(20)
+        configuration.label.font(.title2.bold()).foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 20).background(Color.black.opacity(0.3)).cornerRadius(20)
     }
 }
