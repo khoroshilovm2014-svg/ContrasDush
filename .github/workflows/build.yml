@@ -25,13 +25,14 @@ jobs:
 
       - name: Build App (Unsigned)
         run: |
-          xcodebuild -project ContrasDush.xcodeproj -scheme ContrasDush -sdk iphoneos -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+          # Добавляем -derivedDataPath ./build, чтобы Xcode сохранил приложение в нашу папку
+          xcodebuild -project ContrasDush.xcodeproj -scheme ContrasDush -sdk iphoneos -configuration Release -derivedDataPath ./build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
       - name: Create Payload folder
         run: |
           mkdir -p build/ios/ipa/Payload
-          # Ищем папку .app и копируем её в Payload
-          find . -name "ContrasDush.app" -type d -exec cp -r {} build/ios/ipa/Payload/ \;
+          # Теперь мы точно знаем, где лежит файл
+          cp -r build/Build/Products/Release-iphoneos/ContrasDush.app build/ios/ipa/Payload/
 
       - name: Package to IPA
         run: |
