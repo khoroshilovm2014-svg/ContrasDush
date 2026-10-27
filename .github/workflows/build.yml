@@ -30,7 +30,8 @@ jobs:
       - name: Create Payload folder
         run: |
           mkdir -p build/ios/ipa/Payload
-          cp -r build/ios/Release-iphoneos/ContrasDush.app build/ios/ipa/Payload/
+          # Ищем папку .app и копируем её в Payload
+          find . -name "ContrasDush.app" -type d -exec cp -r {} build/ios/ipa/Payload/ \;
 
       - name: Package to IPA
         run: |
